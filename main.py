@@ -11,7 +11,7 @@ WSGI_PATH = "/var/www/Ramsen0004_pythonanywhere_com_wsgi.py"
 
 @app.route("/")
 def home():
-    return "Kib"
+    return "HUFHIEHF"
 
 @app.route("/update_server", methods=["POST"])
 def update_server():
