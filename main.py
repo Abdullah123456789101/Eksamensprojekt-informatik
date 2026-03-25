@@ -11,13 +11,23 @@ WSGI_PATH = "/var/www/Ramsen0004_pythonanywhere_com_wsgi.py"
 
 @app.route("/update_server", methods=["POST"])
 def update_server():
-    signature = request.headers.get("X-Hub-Signature-256")
-    if not signature:
-        abort(403)
+    print("Webhook called!")
 
-    sha_name, signature = signature.split("=", 1)
+    signature = request.headers.get("X-Hub-Signature-256")
+    print("Signature:", signature)
+
+    if not signature:
+        return "No signature received", 403
+
+    try:
+        sha_name, signature = signature.split("=", 1)
+    except ValueError:
+        return "Bad signature format", 403
+
+    print("SHA name:", sha_name)
+
     if sha_name != "sha256":
-        abort(403)
+        return "Wrong hash type", 403
 
     mac = hmac.new(
         WEBHOOK_SECRET.encode("utf-8"),
@@ -25,14 +35,25 @@ def update_server():
         digestmod=hashlib.sha256
     )
 
-    if not hmac.compare_digest(mac.hexdigest(), signature):
-        abort(403)
+    calculated = mac.hexdigest()
+    print("Calculated:", calculated)
+    print("GitHub:", signature)
+
+    if not hmac.compare_digest(calculated, signature):
+        return f"Signature mismatch\nCalc: {calculated}\nGitHub: {signature}", 403
 
     event = request.headers.get("X-GitHub-Event", "")
+    print("Event:", event)
+
     if event != "push":
         return "Ignoring non-push event", 200
 
-    subprocess.check_call(["git", "-C", REPO_PATH, "pull"])
-    subprocess.check_call(["touch", WSGI_PATH])
+    print("Pulling repo...")
 
-    return "Updated successfully", 200
+    try:
+        subprocess.check_call(["git", "-C", REPO_PATH, "pull"])
+        subprocess.check_call(["touch", WSGI_PATH])
+    except Exception as e:
+        return f"Error during deploy: {e}", 500
+
+    return "Updated successfully 🚀", 200
