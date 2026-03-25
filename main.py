@@ -5,7 +5,7 @@ import hashlib
 
 app = Flask(__name__)
 
-WEBHOOK_SECRET = "skriv-en-lang-hemmelig-noegle-her"
+WEBHOOK_SECRET = "Shekib"
 REPO_PATH = "/home/Ramsen0004/Eksamensprojekt-informatik"
 WSGI_PATH = "/var/www/Ramsen0004_pythonanywhere_com_wsgi.py"
 
