@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drivhus Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="hero">
+            <h1>Drivhus Dashboard</h1>
+            <p>
+                Overvåg jordfugtighed, temperatur, luftfugtighed og næringsniveauer.
+                Styr også vandingen manuelt, hvis det bliver nødvendigt.
+            </p>
+        </header>
+
+        <nav class="nav">
+            <a href="{{ url_for('home') }}" class="active">Home</a>
+            <a href="{{ url_for('history_page') }}">Historik</a>
+            <a href="{{ url_for('settings_page') }}">Indstillinger</a>
+        </nav>
+
+        <section class="cards six-cards">
+            <div class="card">
+                <h3>Jordfugtighed</h3>
+                <p class="value">{{ data.soil_moisture }}%</p>
+            </div>
+            <div class="card">
+                <h3>Temperatur</h3>
+                <p class="value">{{ data.temperature }}°C</p>
+            </div>
+            <div class="card">
+                <h3>Luftfugtighed</h3>
+                <p class="value">{{ data.humidity }}%</p>
+            </div>
+            <div class="card">
+                <h3>Nitrogen</h3>
+                <p class="value">{{ data.nitrogen }}</p>
+            </div>
+            <div class="card">
+                <h3>Fosfor</h3>
+                <p class="value">{{ data.phosphorus }}</p>
+            </div>
+            <div class="card">
+                <h3>Kalium</h3>
+                <p class="value">{{ data.potassium }}</p>
+            </div>
+        </section>
+
+        <section class="grid two-columns">
+            <div class="panel">
+                <h2>Status</h2>
+                <p><strong>Pumpe:</strong> {{ 'Aktiv' if pump_active else 'Stoppet' }}</p>
+                <p><strong>Auto-vanding:</strong> {{ 'Til' if settings.auto_watering else 'Fra' }}</p>
+                <p><strong>Systemstatus:</strong> {{ system_status }}</p>
+            </div>
+
+            <div class="panel">
+                <h2>Advarsler og anbefalinger</h2>
+                {% if alerts or nutrient_advice %}
+                    <ul class="simple-list">
+                        {% for alert in alerts %}
+                            <li>{{ alert }}</li>
+                        {% endfor %}
+                        {% for item in nutrient_advice %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Systemet kører normalt.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="grid two-columns">
+            <div class="panel">
+                <h2>Manuel styring</h2>
+                <p class="muted">Brug knapperne herunder til at styre pumpen manuelt.</p>
+
+                <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                    <button class="btn green" type="submit" name="action" value="start">Start vanding</button>
+                </form>
+
+                <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                    <button class="btn red" type="submit" name="action" value="stop">Stop vanding</button>
+                </form>
+
+                <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                    <button class="btn dark" type="submit" name="action" value="toggle_auto">Slå auto-vanding til/fra</button>
+                </form>
+            </div>
+
+            <div class="panel">
+                <h2>Graf over målinger</h2>
+                <p class="muted">Udvikling i jordfugtighed, temperatur og luftfugtighed.</p>
+
+                <div class="chart-group">
+                    <p class="chart-title">Jordfugtighed</p>
+                    {% for row in history %}
+                        <div class="chart-row">
+                            <span class="chart-label">{{ row.time }}</span>
+                            <div class="bar-bg chart-bar">
+                                <div class="bar-fill soil-bar" style="width: {{ row.soil_moisture }}%;"></div>
+                            </div>
+                            <span class="chart-value">{{ row.soil_moisture }}%</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="chart-group">
+                    <p class="chart-title">Temperatur</p>
+                    {% for row in history %}
+                        <div class="chart-row">
+                            <span class="chart-label">{{ row.time }}</span>
+                            <div class="bar-bg chart-bar">
+                                <div class="bar-fill temp-bar" style="width: {{ (row.temperature / 40 * 100)|round }}%;"></div>
+                            </div>
+                            <span class="chart-value">{{ row.temperature }}°C</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="chart-group">
+                    <p class="chart-title">Luftfugtighed</p>
+                    {% for row in history %}
+                        <div class="chart-row">
+                            <span class="chart-label">{{ row.time }}</span>
+                            <div class="bar-bg chart-bar">
+                                <div class="bar-fill humidity-bar" style="width: {{ row.humidity }}%;"></div>
+                            </div>
+                            <span class="chart-value">{{ row.humidity }}%</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
