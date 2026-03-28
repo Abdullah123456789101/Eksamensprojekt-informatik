@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historik</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="hero">
+            <h1>Historik</h1>
+            <p>Se tidligere målinger og hændelser fra drivhuset.</p>
+        </header>
+
+        <nav class="nav">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('history_page') }}" class="active">Historik</a>
+            <a href="{{ url_for('settings_page') }}">Indstillinger</a>
+        </nav>
+
+        <section class="grid two-columns">
+            <div class="panel">
+                <h2>Målehistorik</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tid</th>
+                            <th>Jordfugtighed</th>
+                            <th>Temperatur</th>
+                            <th>Luftfugtighed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in history %}
+                        <tr>
+                            <td>{{ row.time }}</td>
+                            <td>{{ row.soil_moisture }}%</td>
+                            <td>{{ row.temperature }}°C</td>
+                            <td>{{ row.humidity }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel">
+                <h2>Simpel graf</h2>
+                {% for row in history %}
+                    <div class="metric">
+                        <div class="metric-top">
+                            <span>{{ row.time }}</span>
+                            <span>{{ row.soil_moisture }}%</span>
+                        </div>
+                        <div class="bar-bg">
+                            <div class="bar-fill" style="width: {{ row.soil_moisture }}%;"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Hændelseslog</h2>
+            <ul class="simple-list">
+                {% for event in events %}
+                    <li><strong>{{ event.time }}</strong> - {{ event.description }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+</body>
+</html>
