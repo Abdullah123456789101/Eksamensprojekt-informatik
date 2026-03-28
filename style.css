@@ -1,0 +1,255 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #eef3ef;
+    color: #111;
+}
+
+.container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.hero {
+    background: #2f9a5f;
+    color: white;
+    padding: 28px 30px;
+    border-radius: 0 0 16px 16px;
+    margin-bottom: 18px;
+}
+
+.hero h1 {
+    margin: 0 0 10px 0;
+    font-size: 42px;
+}
+
+.hero p {
+    margin: 0;
+    max-width: 760px;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+.nav {
+    margin: 10px 0 20px 0;
+}
+
+.nav a {
+    display: inline-block;
+    margin-right: 14px;
+    text-decoration: none;
+    color: #2f9a5f;
+    font-weight: bold;
+    background: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+
+.nav a.active {
+    background: #2f9a5f;
+    color: white;
+}
+
+.cards {
+    display: grid;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.six-cards {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.card,
+.panel {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.card h3,
+.panel h2 {
+    margin-top: 0;
+}
+
+.value {
+    font-size: 34px;
+    font-weight: bold;
+    margin: 10px 0 0 0;
+}
+
+.grid {
+    display: grid;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.two-columns {
+    grid-template-columns: 1fr 1fr;
+}
+
+.simple-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.simple-list li {
+    margin-bottom: 10px;
+}
+
+.muted {
+    color: #666;
+    line-height: 1.5;
+}
+
+.button-form {
+    margin-bottom: 10px;
+}
+
+.btn {
+    border: none;
+    padding: 11px 16px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn.green {
+    background: #28a745;
+}
+
+.btn.red {
+    background: #c62828;
+}
+
+.btn.dark {
+    background: #444;
+}
+
+.metric {
+    margin-bottom: 22px;
+}
+
+.metric-top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.bar-bg {
+    width: 100%;
+    height: 12px;
+    background: #ddd;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: #28a745;
+    border-radius: 999px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.settings-panel form {
+    display: flex;
+    flex-direction: column;
+    max-width: 420px;
+}
+
+.settings-panel label {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.settings-panel input[type="number"] {
+    padding: 10px;
+    margin-bottom: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+@media (max-width: 1000px) {
+    .six-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 800px) {
+    .two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .six-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 520px) {
+    .six-cards {
+        grid-template-columns: 1fr;
+    }
+}
+.chart-group {
+    margin-bottom: 24px;
+}
+
+.chart-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.chart-row {
+    display: grid;
+    grid-template-columns: 55px 1fr 55px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.chart-label,
+.chart-value {
+    font-size: 14px;
+}
+
+.chart-bar {
+    height: 14px;
+}
+
+.soil-bar {
+    background: #28a745;
+}
+
+.temp-bar {
+    background: #f39c12;
+}
+
+.humidity-bar {
+    background: #3498db;
+}
