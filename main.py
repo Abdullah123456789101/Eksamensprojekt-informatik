@@ -1,63 +1,92 @@
-from flask import Flask, render_template, request, redirect, url_for
-import subprocess
-import hmac
-import hashlib
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from fake_data import generate_measurements
+from database import (
+    init_db,
+    save_measurement,
+    get_history,
+    save_event,
+    get_events
+)
 
 app = Flask(__name__)
 
-# Midlertidige eksempeldata. Hent fra sencor
-measurements = {
-    "soil_moisture": 40,
-    "temperature": 25,
-    "humidity": 60,
-    "nitrogen": 18,
-    "phosphorus": 12,
-    "potassium": 21,
-}
-
+# System state
+measurements = {}
 settings = {
     "min_soil_moisture": 45,
     "max_temperature": 30,
     "min_humidity": 50,
     "auto_watering": True,
 }
-
 pump_active = False
 
-history = [
-    {"time": "10:00", "soil_moisture": 38, "temperature": 24, "humidity": 59},
-    {"time": "10:15", "soil_moisture": 40, "temperature": 25, "humidity": 60},
-    {"time": "10:30", "soil_moisture": 42, "temperature": 25, "humidity": 61},
-    {"time": "10:45", "soil_moisture": 44, "temperature": 26, "humidity": 62},
-]
 
-events = [
-    {"time": "10:00", "description": "Lav jordfugtighed registreret"},
-    {"time": "10:10", "description": "Mulig mangel på fosfor fundet"},
-    {"time": "10:20", "description": "Pumpen blev startet manuelt"},
-]
+# SIMULATION
 
+def update_measurements():
+    global measurements, pump_active
+
+    if not measurements:
+        return
+
+    # AUTO-VANDING LOGIK
+    if settings["auto_watering"]:
+        if measurements["soil_moisture"] < settings["min_soil_moisture"]:
+            if not pump_active:
+                pump_active = True
+                save_event("Auto-vanding: Pumpe startet (lav jordfugtighed)")
+        elif measurements["soil_moisture"] >= settings["min_soil_moisture"] + 10:
+            if pump_active:
+                pump_active = False
+                save_event("Auto-vanding: Pumpe stoppet (fugtighed OK)")
+
+    if pump_active:
+        # Vand ON - fugtighed stiger
+        measurements["soil_moisture"] += 2
+        measurements["humidity"] += 1
+        measurements["temperature"] -= 0.2
+
+        # Planten bruger næring langsomt når den vandes
+        measurements["nitrogen"] -= 0.2
+        measurements["phosphorus"] -= 0.1
+        measurements["potassium"] -= 0.1
+    else:
+        # Vand OFF - fugtighed falder
+        measurements["soil_moisture"] -= 1
+        measurements["humidity"] -= 0.5
+        measurements["temperature"] += 0.1
+
+        # Planten bruger stadig næring, bare langsommere
+        measurements["nitrogen"] -= 0.05
+        measurements["phosphorus"] -= 0.02
+        measurements["potassium"] -= 0.02
+
+    # Begræns værdier
+    measurements["soil_moisture"] = max(0, min(100, measurements["soil_moisture"]))
+    measurements["humidity"] = max(0, min(100, measurements["humidity"]))
+    measurements["temperature"] = max(0, min(50, measurements["temperature"]))
+    measurements["nitrogen"] = max(0, min(100, measurements["nitrogen"]))
+    measurements["phosphorus"] = max(0, min(100, measurements["phosphorus"]))
+    measurements["potassium"] = max(0, min(100, measurements["potassium"]))
+
+
+# LOGIK
 
 def build_alerts():
     alerts = []
 
     if measurements["soil_moisture"] < settings["min_soil_moisture"]:
-        alerts.append("Jordfugtigheden er under minimumsgrænsen.")
-
+        alerts.append("Jordfugtighed er under minimumsgrænsen — overvej at starte vanding.")
     if measurements["temperature"] > settings["max_temperature"]:
-        alerts.append("Temperaturen er over den maksimale grænse.")
-
+        alerts.append("Temperaturen er over maksimum — tjek ventilation.")
     if measurements["humidity"] < settings["min_humidity"]:
-        alerts.append("Luftfugtigheden er under minimumsgrænsen.")
-
+        alerts.append("Luftfugtighed er under minimumsgrænsen.")
     if measurements["nitrogen"] < 15:
-        alerts.append("Mulig mangel på kvælstof.")
-
+        alerts.append("Lav nitrogen — tilsæt kvælstofgødning (f.eks. ammoniumnitrat).")
     if measurements["phosphorus"] < 15:
-        alerts.append("Mulig mangel på fosfor.")
-
+        alerts.append("Lav fosfor — tilsæt fosforgødning (f.eks. superfosfat).")
     if measurements["potassium"] < 15:
-        alerts.append("Mulig mangel på kalium.")
+        alerts.append("Lav kalium — tilsæt kaliumgødning (f.eks. kaliumsulfat).")
 
     return alerts
 
@@ -66,14 +95,11 @@ def build_nutrient_advice():
     advice = []
 
     if measurements["nitrogen"] < 15:
-        advice.append("Planten mangler muligvis kvælstof.")
+        advice.append("Nitrogen under 15 — planten kan vise gule blade og langsom vækst.")
     if measurements["phosphorus"] < 15:
-        advice.append("Planten mangler muligvis fosfor.")
+        advice.append("Fosfor under 15 — planten kan vise lilla/røde blade og dårlig rodvækst.")
     if measurements["potassium"] < 15:
-        advice.append("Planten mangler muligvis kalium.")
-
-    if not advice:
-        advice.append("Næringsniveauerne ser normale ud.")
+        advice.append("Kalium under 15 — planten kan vise gule bladkanter og svage stængler.")
 
     return advice
 
@@ -82,10 +108,21 @@ def system_status(alerts):
     return "Advarsel" if alerts else "Normal"
 
 
+# ROUTES
+
 @app.route("/")
 def home():
+    global measurements
+
+    if not measurements:
+        measurements.update(generate_measurements())
+
+    update_measurements()
+    save_measurement(measurements)
+
     alerts = build_alerts()
     nutrient_advice = build_nutrient_advice()
+    history = get_history()
 
     return render_template(
         "home.html",
@@ -99,9 +136,45 @@ def home():
     )
 
 
+@app.route("/api/data")
+def api_data():
+    global measurements
+
+    if not measurements:
+        measurements.update(generate_measurements())
+
+    update_measurements()
+    save_measurement(measurements)
+
+    alerts = build_alerts()
+    history = get_history(limit=20)
+
+    return jsonify({
+        "data": {k: round(v, 1) for k, v in measurements.items()},
+        "pump_active": pump_active,
+        "alerts": alerts,
+        "system_status": system_status(alerts),
+        "history": history,
+        "settings": settings,
+        "auto_watering": settings["auto_watering"]
+    })
+
+
 @app.route("/history")
 def history_page():
-    return render_template("history.html", history=history, events=events)
+    return render_template(
+        "history.html",
+        history=get_history(),
+        events=get_events()
+    )
+
+
+@app.route("/api/history")
+def api_history():
+    return jsonify({
+        "history": get_history(limit=20),
+        "events": get_events(limit=10)
+    })
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -114,7 +187,7 @@ def settings_page():
         settings["min_humidity"] = float(request.form.get("min_humidity", 50))
         settings["auto_watering"] = request.form.get("auto_watering") == "on"
 
-        events.insert(0, {"time": "Nu", "description": "Indstillinger blev opdateret"})
+        save_event("Indstillinger blev opdateret")
         return redirect(url_for("settings_page"))
 
     return render_template("settings.html", settings=settings)
@@ -128,20 +201,41 @@ def water():
 
     if action == "start":
         pump_active = True
-        events.insert(0, {"time": "Nu", "description": "Pumpen blev startet manuelt"})
+        save_event("Pumpen blev startet manuelt")
     elif action == "stop":
         pump_active = False
-        events.insert(0, {"time": "Nu", "description": "Pumpen blev stoppet manuelt"})
+        save_event("Pumpen blev stoppet manuelt")
     elif action == "toggle_auto":
         settings["auto_watering"] = not settings["auto_watering"]
         status = "til" if settings["auto_watering"] else "fra"
-        events.insert(0, {"time": "Nu", "description": f"Auto-vanding blev slået {status}"})
+        save_event(f"Auto-vanding blev slået {status}")
 
     return redirect(url_for("home"))
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/fertilize", methods=["POST"])
+def fertilize():
+    nutrient = request.form.get("nutrient")
+    dose = float(request.form.get("dose", 10))
+
+    nutrient_names = {
+        "nitrogen": "Nitrogen (kvælstof)",
+        "phosphorus": "Fosfor",
+        "potassium": "Kalium"
+    }
+
+    if nutrient in measurements:
+        measurements[nutrient] = min(100, measurements[nutrient] + dose)
+        navn = nutrient_names.get(nutrient, nutrient)
+        save_event(f"Gødning tilsat: {navn} +{dose:.0f} enheder (nu {measurements[nutrient]:.1f})")
+
+    return redirect(url_for("home"))
+
+# GITHUB AUTO-DEPLOY
+WEBHOOK_SECRET = "Shekib"
+REPO_PATH = "/path/to/repo"
+WSGI_PATH = "/path/to/wsgi.py"
+
 
 @app.route("/update_server", methods=["POST"])
 def update_server():
@@ -177,5 +271,8 @@ def update_server():
     except Exception as e:
         return f"Deploy error: {e}", 500
 
+# START APP
+
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)

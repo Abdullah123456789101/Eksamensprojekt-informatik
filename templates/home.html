@@ -5,137 +5,331 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drivhus Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card.ok   { background-color: #e0f7e9; }
+        .card.warn { background-color: #ffe0e0; }
+        .card.ok   h3, .card.ok   .value { color: #1b5e20; }
+        .card.warn h3, .card.warn .value { color: #b71c1c; }
+
+        .alert-box {
+            background: #ffe0e0;
+            border-left: 4px solid #e53935;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.4rem;
+            color: #b71c1c;
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .badge-active  { background: #e0f7e9; color: #1b5e20; }
+        .badge-stopped { background: #f3f3f3; color: #555; }
+        .badge-on      { background: #e3f2fd; color: #0d47a1; }
+        .badge-off     { background: #f3f3f3; color: #555; }
+
+        .fert-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+            padding: 0.6rem 0.75rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .fert-row strong { min-width: 75px; font-size: 0.95rem; }
+        .fert-row .fert-level {
+            font-size: 0.8rem;
+            color: #888;
+            min-width: 55px;
+        }
+        .fert-row input[type=number] {
+            width: 58px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .btn-dose {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .btn-dose:hover { background: #388e3c; }
+        .fert-note {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: -0.4rem;
+            margin-bottom: 0.75rem;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header class="hero">
-            <h1>Drivhus Dashboard</h1>
+<div class="container">
+
+    <header class="hero">
+        <h1>Drivhus Dashboard</h1>
+        <p>Overvåg jordfugtighed, temperatur, luftfugtighed og næringsniveauer. Styr også vandingen manuelt, hvis det bliver nødvendigt.</p>
+    </header>
+
+    <nav class="nav">
+        <a href="{{ url_for('home') }}" class="active">Home</a>
+        <a href="{{ url_for('history_page') }}">Historik</a>
+        <a href="{{ url_for('settings_page') }}">Indstillinger</a>
+    </nav>
+
+    <!-- Målingskort -->
+    <section class="cards six-cards">
+        <div class="card" id="card-soil">
+            <h3>Jordfugtighed</h3>
+            <p class="value" id="val-soil">{{ data.soil_moisture }}%</p>
+        </div>
+        <div class="card" id="card-temp">
+            <h3>Temperatur</h3>
+            <p class="value" id="val-temp">{{ data.temperature }}°C</p>
+        </div>
+        <div class="card" id="card-hum">
+            <h3>Luftfugtighed</h3>
+            <p class="value" id="val-hum">{{ data.humidity }}%</p>
+        </div>
+        <div class="card" id="card-n">
+            <h3>Nitrogen</h3>
+            <p class="value" id="val-n">{{ data.nitrogen }}</p>
+        </div>
+        <div class="card" id="card-p">
+            <h3>Fosfor</h3>
+            <p class="value" id="val-p">{{ data.phosphorus }}</p>
+        </div>
+        <div class="card" id="card-k">
+            <h3>Kalium</h3>
+            <p class="value" id="val-k">{{ data.potassium }}</p>
+        </div>
+    </section>
+
+    <!-- Status + Advarsler -->
+    <section class="grid two-columns">
+        <div class="panel">
+            <h2>Status</h2>
             <p>
-                Overvåg jordfugtighed, temperatur, luftfugtighed og næringsniveauer.
-                Styr også vandingen manuelt, hvis det bliver nødvendigt.
+                <strong>Pumpe:</strong>
+                <span id="pump-status" class="status-badge {{ 'badge-active' if pump_active else 'badge-stopped' }}">
+                    {{ 'Aktiv' if pump_active else 'Stoppet' }}
+                </span>
             </p>
-        </header>
+            <p>
+                <strong>Auto-vanding:</strong>
+                <span id="auto-status" class="status-badge {{ 'badge-on' if settings.auto_watering else 'badge-off' }}">
+                    {{ 'Til' if settings.auto_watering else 'Fra' }}
+                </span>
+            </p>
+            <p>
+                <strong>Systemstatus:</strong>
+                <span id="sys-status">{{ system_status }}</span>
+            </p>
+        </div>
 
-        <nav class="nav">
-            <a href="{{ url_for('home') }}" class="active">Home</a>
-            <a href="{{ url_for('history_page') }}">Historik</a>
-            <a href="{{ url_for('settings_page') }}">Indstillinger</a>
-        </nav>
-
-        <section class="cards six-cards">
-            <div class="card">
-                <h3>Jordfugtighed</h3>
-                <p class="value">{{ data.soil_moisture }}%</p>
-            </div>
-            <div class="card">
-                <h3>Temperatur</h3>
-                <p class="value">{{ data.temperature }}°C</p>
-            </div>
-            <div class="card">
-                <h3>Luftfugtighed</h3>
-                <p class="value">{{ data.humidity }}%</p>
-            </div>
-            <div class="card">
-                <h3>Nitrogen</h3>
-                <p class="value">{{ data.nitrogen }}</p>
-            </div>
-            <div class="card">
-                <h3>Fosfor</h3>
-                <p class="value">{{ data.phosphorus }}</p>
-            </div>
-            <div class="card">
-                <h3>Kalium</h3>
-                <p class="value">{{ data.potassium }}</p>
-            </div>
-        </section>
-
-        <section class="grid two-columns">
-            <div class="panel">
-                <h2>Status</h2>
-                <p><strong>Pumpe:</strong> {{ 'Aktiv' if pump_active else 'Stoppet' }}</p>
-                <p><strong>Auto-vanding:</strong> {{ 'Til' if settings.auto_watering else 'Fra' }}</p>
-                <p><strong>Systemstatus:</strong> {{ system_status }}</p>
-            </div>
-
-            <div class="panel">
-                <h2>Advarsler og anbefalinger</h2>
+        <div class="panel">
+            <h2>Advarsler og anbefalinger</h2>
+            <div id="alerts-container">
                 {% if alerts or nutrient_advice %}
-                    <ul class="simple-list">
-                        {% for alert in alerts %}
-                            <li>{{ alert }}</li>
-                        {% endfor %}
-                        {% for item in nutrient_advice %}
-                            <li>{{ item }}</li>
-                        {% endfor %}
-                    </ul>
+                    {% for alert in alerts %}
+                        <div class="alert-box">{{ alert }}</div>
+                    {% endfor %}
+                    {% for item in nutrient_advice %}
+                        <div class="alert-box">{{ item }}</div>
+                    {% endfor %}
                 {% else %}
                     <p>Systemet kører normalt.</p>
                 {% endif %}
             </div>
-        </section>
+        </div>
+    </section>
 
-        <section class="grid two-columns">
-            <div class="panel">
-                <h2>Manuel styring</h2>
-                <p class="muted">Brug knapperne herunder til at styre pumpen manuelt.</p>
+    <!-- Manuel styring + Graf -->
+    <section class="grid two-columns">
+        <div class="panel">
+            <h2>Manuel styring</h2>
+            <p class="muted">Styr pumpen manuelt herunder.</p>
 
-                <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                    <button class="btn green" type="submit" name="action" value="start">Start vanding</button>
-                </form>
+            <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                <button class="btn green" type="submit" name="action" value="start">Start vanding</button>
+            </form>
+            <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                <button class="btn red" type="submit" name="action" value="stop">Stop vanding</button>
+            </form>
+            <form action="{{ url_for('water') }}" method="POST" class="button-form">
+                <button class="btn dark" type="submit" name="action" value="toggle_auto">Slå auto-vanding til/fra</button>
+            </form>
 
-                <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                    <button class="btn red" type="submit" name="action" value="stop">Stop vanding</button>
-                </form>
+            <hr style="margin: 1.2rem 0; border: none; border-top: 1px solid #eee;">
 
-                <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                    <button class="btn dark" type="submit" name="action" value="toggle_auto">Slå auto-vanding til/fra</button>
+            <h2>Gødningsstyring</h2>
+            <p class="muted">Tilsæt en dosis gødning.</p>
+            <p class="fert-note">Næringsstoffer forbruges langsomt af planten over tid. Tilsæt når niveauet falder under 15.</p>
+
+            <!-- Nitrogen -->
+            <div class="fert-row">
+                <strong>Nitrogen</strong>
+                <span class="fert-level" id="level-n">{{ data.nitrogen|round(1) }}</span>
+                <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
+                    <input type="hidden" name="nutrient" value="nitrogen">
+                    <input type="number" name="dose" value="10" min="1" max="50">
+                    <button class="btn-dose" type="submit">Tilsæt</button>
                 </form>
             </div>
 
-            <div class="panel">
-                <h2>Graf over målinger</h2>
-                <p class="muted">Udvikling i jordfugtighed, temperatur og luftfugtighed.</p>
-
-                <div class="chart-group">
-                    <p class="chart-title">Jordfugtighed</p>
-                    {% for row in history %}
-                        <div class="chart-row">
-                            <span class="chart-label">{{ row.time }}</span>
-                            <div class="bar-bg chart-bar">
-                                <div class="bar-fill soil-bar" style="width: {{ row.soil_moisture }}%;"></div>
-                            </div>
-                            <span class="chart-value">{{ row.soil_moisture }}%</span>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="chart-group">
-                    <p class="chart-title">Temperatur</p>
-                    {% for row in history %}
-                        <div class="chart-row">
-                            <span class="chart-label">{{ row.time }}</span>
-                            <div class="bar-bg chart-bar">
-                                <div class="bar-fill temp-bar" style="width: {{ (row.temperature / 40 * 100)|round }}%;"></div>
-                            </div>
-                            <span class="chart-value">{{ row.temperature }}°C</span>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="chart-group">
-                    <p class="chart-title">Luftfugtighed</p>
-                    {% for row in history %}
-                        <div class="chart-row">
-                            <span class="chart-label">{{ row.time }}</span>
-                            <div class="bar-bg chart-bar">
-                                <div class="bar-fill humidity-bar" style="width: {{ row.humidity }}%;"></div>
-                            </div>
-                            <span class="chart-value">{{ row.humidity }}%</span>
-                        </div>
-                    {% endfor %}
-                </div>
+            <!-- Fosfor -->
+            <div class="fert-row">
+                <strong>Fosfor</strong>
+                <span class="fert-level" id="level-p">{{ data.phosphorus|round(1) }}</span>
+                <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
+                    <input type="hidden" name="nutrient" value="phosphorus">
+                    <input type="number" name="dose" value="10" min="1" max="50">
+                    <button class="btn-dose" type="submit">Tilsæt</button>
+                </form>
             </div>
-        </section>
-    </div>
+
+            <!-- Kalium -->
+            <div class="fert-row">
+                <strong>Kalium</strong>
+                <span class="fert-level" id="level-k">{{ data.potassium|round(1) }}</span>
+                <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
+                    <input type="hidden" name="nutrient" value="potassium">
+                    <input type="number" name="dose" value="10" min="1" max="50">
+                    <button class="btn-dose" type="submit">Tilsæt</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Graf over målinger</h2>
+            <p class="muted">Opdateres automatisk hvert 5. sekund.</p>
+            <canvas id="mainChart" height="220"></canvas>
+        </div>
+    </section>
+
+</div>
+
+<script>
+const ctx = document.getElementById('mainChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [
+            {
+                label: 'Jordfugtighed (%)',
+                data: [],
+                borderColor: '#4caf50',
+                backgroundColor: 'rgba(76,175,80,0.08)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 3
+            },
+            {
+                label: 'Temperatur (°C)',
+                data: [],
+                borderColor: '#f44336',
+                backgroundColor: 'rgba(244,67,54,0.08)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 3
+            },
+            {
+                label: 'Luftfugtighed (%)',
+                data: [],
+                borderColor: '#2196f3',
+                backgroundColor: 'rgba(33,150,243,0.08)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        animation: { duration: 400 },
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+function setCard(id, value, unit, isOk) {
+    document.getElementById('val-'  + id).textContent = value.toFixed(1) + unit;
+    document.getElementById('card-' + id).className = 'card ' + (isOk ? 'ok' : 'warn');
+}
+
+function setBadge(id, active, labelOn, labelOff, classOn, classOff) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = active ? labelOn : labelOff;
+    el.className = 'status-badge ' + (active ? classOn : classOff);
+}
+
+async function fetchData() {
+    try {
+        const res  = await fetch("/api/data");
+        const json = await res.json();
+        const d = json.data;
+        const s = json.settings;
+
+        // Kort med farveadvarsel
+        setCard('soil', d.soil_moisture, '%',  d.soil_moisture >= s.min_soil_moisture);
+        setCard('temp', d.temperature,   '°C', d.temperature   <= s.max_temperature);
+        setCard('hum',  d.humidity,      '%',  d.humidity      >= s.min_humidity);
+        setCard('n',    d.nitrogen,      '',   d.nitrogen      >= 15);
+        setCard('p',    d.phosphorus,    '',   d.phosphorus    >= 15);
+        setCard('k',    d.potassium,     '',   d.potassium     >= 15);
+
+        // Opdater gødningsniveauer i fert-rows
+        document.getElementById('level-n').textContent = d.nitrogen.toFixed(1);
+        document.getElementById('level-p').textContent = d.phosphorus.toFixed(1);
+        document.getElementById('level-k').textContent = d.potassium.toFixed(1);
+
+        // Status badges
+        setBadge('pump-status', json.pump_active,   'Aktiv', 'Stoppet', 'badge-active', 'badge-stopped');
+        setBadge('auto-status', json.auto_watering, 'Til',   'Fra',     'badge-on',     'badge-off');
+        document.getElementById('sys-status').textContent = json.system_status;
+
+        // Advarsler
+        const alertsEl = document.getElementById('alerts-container');
+        if (json.alerts && json.alerts.length > 0) {
+            alertsEl.innerHTML = json.alerts.map(a => `<div class="alert-box">${a}</div>`).join('');
+        } else {
+            alertsEl.innerHTML = '<p>Systemet kører normalt.</p>';
+        }
+
+        // Graf
+        const history = json.history.slice().reverse();
+        chart.data.labels = history.map(r => r.time);
+        chart.data.datasets[0].data = history.map(r => r.soil_moisture);
+        chart.data.datasets[1].data = history.map(r => r.temperature);
+        chart.data.datasets[2].data = history.map(r => r.humidity);
+        chart.update();
+
+    } catch (err) {
+        console.error("Fejl ved datahentning:", err);
+    }
+}
+
+fetchData();
+setInterval(fetchData, 5000);
+</script>
 </body>
 </html>

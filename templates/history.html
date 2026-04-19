@@ -31,43 +31,72 @@
                             <th>Luftfugtighed</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for row in history %}
-                        <tr>
-                            <td>{{ row.time }}</td>
-                            <td>{{ row.soil_moisture }}%</td>
-                            <td>{{ row.temperature }}°C</td>
-                            <td>{{ row.humidity }}%</td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="history-table-body">
+                        <tr><td colspan="4">Indlæser...</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="panel">
                 <h2>Simpel graf</h2>
-                {% for row in history %}
-                    <div class="metric">
-                        <div class="metric-top">
-                            <span>{{ row.time }}</span>
-                            <span>{{ row.soil_moisture }}%</span>
-                        </div>
-                        <div class="bar-bg">
-                            <div class="bar-fill" style="width: {{ row.soil_moisture }}%;"></div>
-                        </div>
-                    </div>
-                {% endfor %}
+                <div id="history-bar-chart"></div>
             </div>
         </section>
 
         <section class="panel">
             <h2>Hændelseslog</h2>
-            <ul class="simple-list">
-                {% for event in events %}
-                    <li><strong>{{ event.time }}</strong> - {{ event.description }}</li>
-                {% endfor %}
+            <ul class="simple-list" id="events-list">
+                <li>Indlæser...</li>
             </ul>
         </section>
     </div>
+
+    <script>
+    async function fetchHistory() {
+        try {
+            const res = await fetch("/api/history");
+            const json = await res.json();
+            const history = json.history.reverse(); // ældste først
+
+            // Opdater tabel
+            const tbody = document.getElementById("history-table-body");
+            tbody.innerHTML = history.map(row => `
+                <tr>
+                    <td>${row.time}</td>
+                    <td>${row.soil_moisture}%</td>
+                    <td>${row.temperature}°C</td>
+                    <td>${row.humidity}%</td>
+                </tr>
+            `).join('');
+
+            // Opdater simpel bar-graf
+            const chart = document.getElementById("history-bar-chart");
+            chart.innerHTML = history.map(row => `
+                <div class="metric">
+                    <div class="metric-top">
+                        <span>${row.time}</span>
+                        <span>${row.soil_moisture}%</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill" style="width: ${row.soil_moisture}%;"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Opdater hændelseslog
+            const eventsList = document.getElementById("events-list");
+            eventsList.innerHTML = json.events.map(e => `
+                <li><strong>${e.time}</strong> - ${e.description}</li>
+            `).join('');
+
+        } catch (err) {
+            console.error("Fejl ved historik-hentning:", err);
+        }
+    }
+
+    // Kør med det samme og hvert 5. sekund
+    fetchHistory();
+    setInterval(fetchHistory, 5000);
+    </script>
 </body>
 </html>
