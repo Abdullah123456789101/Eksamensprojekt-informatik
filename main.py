@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from fake_data import generate_measurements
+import hmac
+import hashlib
+import subprocess
 from database import (
     init_db,
     save_measurement,
@@ -233,8 +236,8 @@ def fertilize():
 
 # GITHUB AUTO-DEPLOY
 WEBHOOK_SECRET = "Shekib"
-REPO_PATH = "/path/to/repo"
-WSGI_PATH = "/path/to/wsgi.py"
+REPO_PATH = "/home/Ramsen0004/Eksamensprojekt-informatik"
+WSGI_PATH = "/var/www/ramsen0004_pythonanywhere_com_wsgi.py"
 
 
 @app.route("/update_server", methods=["POST"])
