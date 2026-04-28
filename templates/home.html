@@ -75,9 +75,51 @@
             margin-top: -0.4rem;
             margin-bottom: 0.75rem;
         }
+
+        /* AUTO-TOGGLE KNAP VED SIDEN AF STATUS */
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-toggle-auto {
+            background: white;
+            color: #2d6a4f;
+            border: 1px solid #2d6a4f;
+            padding: 3px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .btn-toggle-auto:hover { background: #f0f9f4; }
+
+        /* TOAST NOTIFIKATION */
+        #toast {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d6a4f;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 10px;
+            z-index: 9999;
+            font-size: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; bottom: 15px; } to { opacity: 1; bottom: 30px; } }
     </style>
 </head>
 <body>
+
+<!-- Toast notifikation -->
+<div id="toast"></div>
+
 <a href="{{ url_for('logout') }}" style="
     position: fixed;
     top: 15px;
@@ -91,7 +133,6 @@
     z-index: 1000;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 ">🚪 Log ud</a>
-<div class="container">
 
 <div class="container">
 
@@ -138,22 +179,34 @@
     <section class="grid two-columns">
         <div class="panel">
             <h2>Status</h2>
-            <p>
+
+            <!-- Pumpe status -->
+            <div class="status-row">
                 <strong>Pumpe:</strong>
                 <span id="pump-status" class="status-badge {{ 'badge-active' if pump_active else 'badge-stopped' }}">
                     {{ 'Aktiv' if pump_active else 'Stoppet' }}
                 </span>
-            </p>
-            <p>
+            </div>
+
+            <!-- Auto-vanding status MED toggle knap -->
+            <div class="status-row">
                 <strong>Auto-vanding:</strong>
                 <span id="auto-status" class="status-badge {{ 'badge-on' if settings.auto_watering else 'badge-off' }}">
                     {{ 'Til' if settings.auto_watering else 'Fra' }}
                 </span>
-            </p>
-            <p>
+                <form action="{{ url_for('water') }}" method="POST" style="margin:0;">
+                    <button class="btn-toggle-auto" type="submit" name="action" value="toggle_auto"
+                        onclick="showToast('🔄 Auto-vanding skiftet!')">
+                        Slå til/fra
+                    </button>
+                </form>
+            </div>
+
+            <!-- Systemstatus -->
+            <div class="status-row">
                 <strong>Systemstatus:</strong>
                 <span id="sys-status">{{ system_status }}</span>
-            </p>
+            </div>
         </div>
 
         <div class="panel">
@@ -180,13 +233,12 @@
             <p class="muted">Styr pumpen manuelt herunder.</p>
 
             <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                <button class="btn green" type="submit" name="action" value="start">Start vanding</button>
+                <button class="btn green" type="submit" name="action" value="start"
+                    onclick="showToast('💧 Vanding startet!')">Start vanding</button>
             </form>
             <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                <button class="btn red" type="submit" name="action" value="stop">Stop vanding</button>
-            </form>
-            <form action="{{ url_for('water') }}" method="POST" class="button-form">
-                <button class="btn dark" type="submit" name="action" value="toggle_auto">Slå auto-vanding til/fra</button>
+                <button class="btn red" type="submit" name="action" value="stop"
+                    onclick="showToast('⛔ Vanding stoppet!')">Stop vanding</button>
             </form>
 
             <hr style="margin: 1.2rem 0; border: none; border-top: 1px solid #eee;">
@@ -202,7 +254,7 @@
                 <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
                     <input type="hidden" name="nutrient" value="nitrogen">
                     <input type="number" name="dose" value="10" min="1" max="50">
-                    <button class="btn-dose" type="submit">Tilsæt</button>
+                    <button class="btn-dose" type="submit" onclick="showToast('🌱 Nitrogen tilsat!')">Tilsæt</button>
                 </form>
             </div>
 
@@ -213,7 +265,7 @@
                 <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
                     <input type="hidden" name="nutrient" value="phosphorus">
                     <input type="number" name="dose" value="10" min="1" max="50">
-                    <button class="btn-dose" type="submit">Tilsæt</button>
+                    <button class="btn-dose" type="submit" onclick="showToast('🌱 Fosfor tilsat!')">Tilsæt</button>
                 </form>
             </div>
 
@@ -224,7 +276,7 @@
                 <form action="{{ url_for('fertilize') }}" method="POST" style="display:flex; gap:6px; align-items:center; margin:0;">
                     <input type="hidden" name="nutrient" value="potassium">
                     <input type="number" name="dose" value="10" min="1" max="50">
-                    <button class="btn-dose" type="submit">Tilsæt</button>
+                    <button class="btn-dose" type="submit" onclick="showToast('🌱 Kalium tilsat!')">Tilsæt</button>
                 </form>
             </div>
         </div>
@@ -239,6 +291,14 @@
 </div>
 
 <script>
+// TOAST FUNKTION
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+}
+
 const ctx = document.getElementById('mainChart').getContext('2d');
 const chart = new Chart(ctx, {
     type: 'line',
@@ -304,7 +364,6 @@ async function fetchData() {
         const d = json.data;
         const s = json.settings;
 
-        // Kort med farveadvarsel
         setCard('soil', d.soil_moisture, '%',  d.soil_moisture >= s.min_soil_moisture);
         setCard('temp', d.temperature,   '°C', d.temperature   <= s.max_temperature);
         setCard('hum',  d.humidity,      '%',  d.humidity      >= s.min_humidity);
@@ -312,17 +371,14 @@ async function fetchData() {
         setCard('p',    d.phosphorus,    '',   d.phosphorus    >= 15);
         setCard('k',    d.potassium,     '',   d.potassium     >= 15);
 
-        // Opdater gødningsniveauer i fert-rows
         document.getElementById('level-n').textContent = d.nitrogen.toFixed(1);
         document.getElementById('level-p').textContent = d.phosphorus.toFixed(1);
         document.getElementById('level-k').textContent = d.potassium.toFixed(1);
 
-        // Status badges
         setBadge('pump-status', json.pump_active,   'Aktiv', 'Stoppet', 'badge-active', 'badge-stopped');
         setBadge('auto-status', json.auto_watering, 'Til',   'Fra',     'badge-on',     'badge-off');
         document.getElementById('sys-status').textContent = json.system_status;
 
-        // Advarsler
         const alertsEl = document.getElementById('alerts-container');
         if (json.alerts && json.alerts.length > 0) {
             alertsEl.innerHTML = json.alerts.map(a => `<div class="alert-box">${a}</div>`).join('');
@@ -330,7 +386,6 @@ async function fetchData() {
             alertsEl.innerHTML = '<p>Systemet kører normalt.</p>';
         }
 
-        // Graf
         const history = json.history.slice().reverse();
         chart.data.labels = history.map(r => r.time);
         chart.data.datasets[0].data = history.map(r => r.soil_moisture);

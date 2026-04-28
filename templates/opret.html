@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Log ind</title>
+    <title>Opret bruger</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -12,7 +12,7 @@
             align-items: center;
             height: 100vh;
         }
-        .login-box {
+        .box {
             background: white;
             padding: 40px;
             border-radius: 12px;
@@ -33,11 +33,6 @@
             font-size: 16px; cursor: pointer; margin-bottom: 10px;
         }
         button:hover { background: #1b4332; }
-        button.secondary {
-            background: white; color: #2d6a4f;
-            border: 2px solid #2d6a4f;
-        }
-        button.secondary:hover { background: #f0f9f4; }
         .error { background: #ffe0e0; color: #c0392b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
         .success { background: #e0ffe0; color: #27ae60; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
         .link { color: #2d6a4f; cursor: pointer; font-size: 13px; text-decoration: underline; }
@@ -45,27 +40,24 @@
     </style>
 </head>
 <body>
-<div class="login-box">
+<div class="box">
     <h1>🌿 PlantMonitor</h1>
-    <p class="subtitle" id="subtitle">Log ind for at fortsætte</p>
+    <p class="subtitle">Opret en ny bruger</p>
 
     <div id="msg"></div>
 
     <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Adgangskode" id="passwordField">
+    <input type="password" id="password" placeholder="Adgangskode (min. 6 tegn)" required>
+    <input type="password" id="password2" placeholder="Gentag adgangskode" required>
 
-    <button onclick="doLogin()">Log ind</button>
-    <a href="/opret" style="display:block; text-decoration:none;">
-    <button class="secondary">Opret ny bruger</button>
-    </a>
+    <button onclick="doSignup()">Opret bruger</button>
     <br>
-    <span class="link" onclick="doForgotPassword()">Glemt adgangskode?</span>
+    <a href="/login" class="link">← Tilbage til log ind</a>
 </div>
 
-<!-- Firebase JS SDK -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDJu_tSpnCBjm3axi4RqoXtnXvpsul1yzE",
@@ -83,57 +75,39 @@
         el.innerText = text;
     }
 
-    async function sendTokenToServer(idToken) {
-        const res = await fetch("/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken })
-        });
-        const data = await res.json();
-        if (data.status === "success") {
-            window.location.href = "/";
-        } else {
-            showMsg("Serverfejl: " + data.message, true);
-        }
-    }
-
-    window.doLogin = async function() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        try {
-            const result = await signInWithEmailAndPassword(auth, email, password);
-            const idToken = await result.user.getIdToken();
-            await sendTokenToServer(idToken);
-        } catch (e) {
-            showMsg("Forkert email eller adgangskode", true);
-        }
-    }
-
     window.doSignup = async function() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+        const password2 = document.getElementById("password2").value;
+
         if (!email || !password) {
-            showMsg("Udfyld email og adgangskode", true); return;
+            showMsg("Udfyld alle felter", true); return;
         }
+        if (password !== password2) {
+            showMsg("Adgangskoderne stemmer ikke overens", true); return;
+        }
+        if (password.length < 6) {
+            showMsg("Adgangskoden skal være mindst 6 tegn", true); return;
+        }
+
         try {
             const result = await createUserWithEmailAndPassword(auth, email, password);
             const idToken = await result.user.getIdToken();
-            await sendTokenToServer(idToken);
+
+            const res = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken })
+            });
+            const data = await res.json();
+
+            if (data.status === "success") {
+                window.location.href = "/";
+            } else {
+                showMsg("Fejl: " + data.message, true);
+            }
         } catch (e) {
             showMsg("Kunne ikke oprette bruger: " + e.message, true);
-        }
-    }
-
-    window.doForgotPassword = async function() {
-        const email = document.getElementById("email").value;
-        if (!email) {
-            showMsg("Skriv din email først", true); return;
-        }
-        try {
-            await sendPasswordResetEmail(auth, email);
-            showMsg("✅ Nulstillingsmail sendt til " + email);
-        } catch (e) {
-            showMsg("Fejl: " + e.message, true);
         }
     }
 </script>

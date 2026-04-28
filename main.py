@@ -8,8 +8,7 @@ from flask import session
 from firebase_admin import auth as firebase_auth
 import firebase_admin
 from firebase_admin import credentials
-
-
+import os
 from database import (
     init_db,
     save_measurement,
@@ -18,10 +17,16 @@ from database import (
     get_events
 )
 
-app = Flask(__name__)
-app.secret_key = "en-hemmelig-nøgle-123"  # tilføj denne linje
 
-cred = credentials.Certificate("/home/Ramsen0004/Eksamensprojekt-informatik/serviceAccountKey.json")
+key_path = "/home/Ramsen0004/Eksamensprojekt-informatik/serviceAccountKey.json"
+if not os.path.exists(key_path):
+    key_path = r"C:\Users\ramse\Eksamensprojekt-informatik\serviceAccountKey.json"
+
+cred = credentials.Certificate(key_path)
+
+app = Flask(__name__)
+app.secret_key = "en-hemmelig-nøgle-123"
+
 firebase_admin.initialize_app(cred)
 
 
@@ -138,6 +143,9 @@ def login():
             return jsonify({"status": "error", "message": str(e)})
     return render_template("login.html")
 
+@app.route("/opret")
+def opret():
+    return render_template("opret.html")
 
 @app.route("/logout")
 def logout():
