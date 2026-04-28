@@ -21,7 +21,7 @@ from database import (
 app = Flask(__name__)
 app.secret_key = "en-hemmelig-nøgle-123"  # tilføj denne linje
 
-cred = credentials.Certificate(r"C:\Users\ramse\Eksamensprojekt-informatik\serviceAccountKey.json")
+cred = credentials.Certificate("/home/Ramsen0004/Eksamensprojekt-informatik/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 
