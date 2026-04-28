@@ -1,9 +1,8 @@
 import sqlite3
+import os
 from datetime import datetime
 
-
-DB_NAME = "drivhus.db"
-
+DB_NAME = os.path.join(os.path.dirname(__file__), "drivhus.db")
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
