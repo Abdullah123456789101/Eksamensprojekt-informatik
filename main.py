@@ -3,6 +3,13 @@ from fake_data import generate_measurements
 import hmac
 import hashlib
 import subprocess
+from auth import login_user
+from flask import session
+from firebase_admin import auth as firebase_auth
+import firebase_admin
+from firebase_admin import credentials
+
+
 from database import (
     init_db,
     save_measurement,
@@ -12,6 +19,11 @@ from database import (
 )
 
 app = Flask(__name__)
+app.secret_key = "en-hemmelig-nøgle-123"  # tilføj denne linje
+
+cred = credentials.Certificate(r"C:\Users\ramse\Eksamensprojekt-informatik\serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
+
 
 # System state
 measurements = {}
@@ -113,8 +125,30 @@ def system_status(alerts):
 
 # ROUTES
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        data = request.get_json()
+        id_token = data.get("idToken")
+        try:
+            decoded = firebase_auth.verify_id_token(id_token)
+            session["user"] = decoded["email"]
+            return jsonify({"status": "success"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)})
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
+
 @app.route("/")
 def home():
+    if "user" not in session:
+        return redirect(url_for("login"))
+    # ... resten af din eksisterende kode
     global measurements
 
     if not measurements:

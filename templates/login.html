@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log ind</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #2d6a4f; margin-bottom: 10px; font-size: 28px; }
+        p.subtitle { color: #888; margin-bottom: 25px; font-size: 14px; }
+        input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border: 1px solid #ddd; border-radius: 8px; font-size: 15px;
+        }
+        input:focus { outline: none; border-color: #2d6a4f; }
+        button {
+            width: 100%; padding: 12px; background: #2d6a4f;
+            color: white; border: none; border-radius: 8px;
+            font-size: 16px; cursor: pointer; margin-bottom: 10px;
+        }
+        button:hover { background: #1b4332; }
+        button.secondary {
+            background: white; color: #2d6a4f;
+            border: 2px solid #2d6a4f;
+        }
+        button.secondary:hover { background: #f0f9f4; }
+        .error { background: #ffe0e0; color: #c0392b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+        .success { background: #e0ffe0; color: #27ae60; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+        .link { color: #2d6a4f; cursor: pointer; font-size: 13px; text-decoration: underline; }
+        #msg { display: none; }
+    </style>
+</head>
+<body>
+<div class="login-box">
+    <h1>🌿 PlantMonitor</h1>
+    <p class="subtitle" id="subtitle">Log ind for at fortsætte</p>
+
+    <div id="msg"></div>
+
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Adgangskode" id="passwordField">
+
+    <button onclick="doLogin()">Log ind</button>
+    <button class="secondary" onclick="doSignup()">Opret ny bruger</button>
+    <br>
+    <span class="link" onclick="doForgotPassword()">Glemt adgangskode?</span>
+</div>
+
+<!-- Firebase JS SDK -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDJu_tSpnCBjm3axi4RqoXtnXvpsul1yzE",
+        authDomain: "internet-of-things-e5507.firebaseapp.com",
+        projectId: "internet-of-things-e5507",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    function showMsg(text, isError = false) {
+        const el = document.getElementById("msg");
+        el.style.display = "block";
+        el.className = isError ? "error" : "success";
+        el.innerText = text;
+    }
+
+    async function sendTokenToServer(idToken) {
+        const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken })
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+            window.location.href = "/";
+        } else {
+            showMsg("Serverfejl: " + data.message, true);
+        }
+    }
+
+    window.doLogin = async function() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        try {
+            const result = await signInWithEmailAndPassword(auth, email, password);
+            const idToken = await result.user.getIdToken();
+            await sendTokenToServer(idToken);
+        } catch (e) {
+            showMsg("Forkert email eller adgangskode", true);
+        }
+    }
+
+    window.doSignup = async function() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        if (!email || !password) {
+            showMsg("Udfyld email og adgangskode", true); return;
+        }
+        try {
+            const result = await createUserWithEmailAndPassword(auth, email, password);
+            const idToken = await result.user.getIdToken();
+            await sendTokenToServer(idToken);
+        } catch (e) {
+            showMsg("Kunne ikke oprette bruger: " + e.message, true);
+        }
+    }
+
+    window.doForgotPassword = async function() {
+        const email = document.getElementById("email").value;
+        if (!email) {
+            showMsg("Skriv din email først", true); return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, email);
+            showMsg("✅ Nulstillingsmail sendt til " + email);
+        } catch (e) {
+            showMsg("Fejl: " + e.message, true);
+        }
+    }
+</script>
+</body>
+</html>
