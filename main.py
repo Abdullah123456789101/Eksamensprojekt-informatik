@@ -314,9 +314,13 @@ def update_server():
         return "Updated successfully", 200
     except Exception as e:
         return f"Deploy error: {e}", 500
-
+@app.route("/status")
+def status():
+    return jsonify({
+        "pump": pump_active
+    })
 # START APP
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
