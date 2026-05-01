@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-from fake_data import generate_measurements
+#from fake_data import generate_measurements
 import hmac
 import hashlib
 import subprocess
@@ -168,7 +168,7 @@ def home():
             "potassium": 50
         }
 
-    update_measurements()
+
     save_measurement(measurements)
 
     alerts = build_alerts()
@@ -201,7 +201,7 @@ def api_data():
             "potassium": 50
         }
 
-    update_measurements()
+
     save_measurement(measurements)
 
     alerts = build_alerts()
