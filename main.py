@@ -76,7 +76,7 @@ def update_measurements():
         measurements["humidity"] -= 0.5
         measurements["temperature"] += 0.1
 
-        # Planten bruger stadig næring, bare langsommere
+        # Planten bruger næring
         measurements["nitrogen"] -= 0.05
         measurements["phosphorus"] -= 0.02
         measurements["potassium"] -= 0.02
@@ -96,17 +96,17 @@ def build_alerts():
     alerts = []
 
     if measurements["soil_moisture"] < settings["min_soil_moisture"]:
-        alerts.append("Jordfugtighed er under minimumsgrænsen — overvej at starte vanding.")
+        alerts.append("Jordfugtighed er under minimumsgrænsen - overvej at starte vanding.")
     if measurements["temperature"] > settings["max_temperature"]:
-        alerts.append("Temperaturen er over maksimum — tjek ventilation.")
+        alerts.append("Temperaturen er over maksimum - tjek ventilation.")
     if measurements["humidity"] < settings["min_humidity"]:
         alerts.append("Luftfugtighed er under minimumsgrænsen.")
     if measurements["nitrogen"] < 15:
-        alerts.append("Lav nitrogen — tilsæt kvælstofgødning (f.eks. ammoniumnitrat).")
+        alerts.append("Lav nitrogen - tilsæt kvælstofgødning (f.eks. ammoniumnitrat).")
     if measurements["phosphorus"] < 15:
-        alerts.append("Lav fosfor — tilsæt fosforgødning (f.eks. superfosfat).")
+        alerts.append("Lav fosfor - tilsæt fosforgødning (f.eks. superfosfat).")
     if measurements["potassium"] < 15:
-        alerts.append("Lav kalium — tilsæt kaliumgødning (f.eks. kaliumsulfat).")
+        alerts.append("Lav kalium - tilsæt kaliumgødning (f.eks. kaliumsulfat).")
 
     return alerts
 
@@ -115,11 +115,11 @@ def build_nutrient_advice():
     advice = []
 
     if measurements["nitrogen"] < 15:
-        advice.append("Nitrogen under 15 — planten kan vise gule blade og langsom vækst.")
+        advice.append("Nitrogen under 15 - planten kan vise gule blade og langsom vækst.")
     if measurements["phosphorus"] < 15:
-        advice.append("Fosfor under 15 — planten kan vise lilla/røde blade og dårlig rodvækst.")
+        advice.append("Fosfor under 15 - planten kan vise lilla/røde blade og dårlig rodvækst.")
     if measurements["potassium"] < 15:
-        advice.append("Kalium under 15 — planten kan vise gule bladkanter og svage stængler.")
+        advice.append("Kalium under 15 - planten kan vise gule bladkanter og svage stængler.")
 
     return advice
 
@@ -156,7 +156,6 @@ def logout():
 def home():
     if "user" not in session:
         return redirect(url_for("login"))
-    # ... resten af din eksisterende kode
     global measurements
 
     if not measurements:
